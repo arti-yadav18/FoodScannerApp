@@ -1,155 +1,128 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import './App.css';
 
 function App() {
-  const [items, setItems] = useState([]);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [sortBy, setSortBy] = useState('');
-  const [newItem, setNewItem] = useState({ name: '', calories: '', category: '' });
+  const [foods, setFoods] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  const [name, setName] = useState('');
+  const [calories, setCalories] = useState('');
+  const [category, setCategory] = useState('');
 
   useEffect(() => {
-    fetchItems();
+    fetch('/api/scan')
+      .then(res => res.json())
+      .then(data => setFoods(data));
   }, []);
 
-  const fetchItems = async () => {
-    try {
-      const response = await axios.get('/api/scan');
-      setItems(response.data);
-    } catch (error) {
-      console.error('Error fetching food items:', error);
-    }
+  const handleSubmit = e => {
+    e.preventDefault();
+    const newItem = { name, calories, category };
+    fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem),
+    })
+      .then(res => res.json())
+      .then(added => {
+        setFoods([...foods, added]);
+        setName('');
+        setCalories('');
+        setCategory('');
+      });
   };
 
-  const handleChange = (e) => {
-    setNewItem({ ...newItem, [e.target.name]: e.target.value });
-  };
+  const filteredFoods = foods
+    .filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+      if (typeof aVal === 'string') {
+        return sortOrder === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+    });
 
-  const handleAdd = async () => {
-    if (!newItem.name || !newItem.calories || !newItem.category) return;
-
-    try {
-      await axios.post('/api/scan', newItem);
-      setNewItem({ name: '', calories: '', category: '' });
-      fetchItems();
-    } catch (error) {
-      console.error('Error adding item:', error);
+  const toggleSort = field => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
     }
   };
-
-  const handleDelete = async (id) => {
-    try {
-      await axios.delete(`/api/scan/${id}`);
-      fetchItems();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-    }
-  };
-
-  // Filtering + Sorting
-  let filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(search.toLowerCase()) &&
-    (categoryFilter === 'All' || item.category === categoryFilter)
-  );
-
-  filteredItems = [...filteredItems].sort((a, b) => {
-    switch (sortBy) {
-      case 'name-asc':
-        return a.name.localeCompare(b.name);
-      case 'name-desc':
-        return b.name.localeCompare(a.name);
-      case 'calories-asc':
-        return a.calories - b.calories;
-      case 'calories-desc':
-        return b.calories - a.calories;
-      default:
-        return 0;
-    }
-  });
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>🍎 Food Scanner</h1>
+    <div className="App">
+      <h1 style={{ color: '#2c3e50' }}>Nutri Scan</h1>
 
-      <div style={{ marginBottom: 20 }}>
+      <form onSubmit={handleSubmit}>
         <input
-          type="text"
-          placeholder="Search by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ marginLeft: 10 }}>
-          <option value="All">All Categories</option>
-          <option value="Fruit">Fruit</option>
-          <option value="Vegetable">Vegetable</option>
-          <option value="Snack">Snack</option>
-        </select>
-
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ marginLeft: 10 }}>
-          <option value="">Sort By</option>
-          <option value="name-asc">Name A–Z</option>
-          <option value="name-desc">Name Z–A</option>
-          <option value="calories-asc">Calories Low–High</option>
-          <option value="calories-desc">Calories High–Low</option>
-        </select>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <input
-          type="text"
-          name="name"
           placeholder="Food Name"
-          value={newItem.name}
-          onChange={handleChange}
+          value={name}
+          onChange={e => setName(e.target.value)}
+          required
         />
         <input
-          type="number"
-          name="calories"
           placeholder="Calories"
-          value={newItem.calories}
-          onChange={handleChange}
+          value={calories}
+          onChange={e => setCalories(e.target.value)}
+          required
         />
         <input
-          type="text"
-          name="category"
           placeholder="Category"
-          value={newItem.category}
-          onChange={handleChange}
+          value={category}
+          onChange={e => setCategory(e.target.value)}
         />
-        <button onClick={handleAdd}>Add</button>
-      </div>
+        <button type="submit" style={{ backgroundColor: '#27ae60', color: '#fff' }}>
+          Add Food
+        </button>
+      </form>
 
-      <table border="1" cellPadding="8">
+      <input
+        type="text"
+        placeholder="Search by name or category..."
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        className="search-box"
+      />
+
+      <table>
         <thead>
-          <tr>
-            <th>Name</th>
-            <th>Calories</th>
-            <th>Category</th>
-            <th>Actions</th>
+          <tr style={{ backgroundColor: '#34495e', color: '#ecf0f1' }}>
+            <th>ID</th>
+            <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>
+              Name {sortField === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
+            </th>
+            <th onClick={() => toggleSort('calories')} style={{ cursor: 'pointer' }}>
+              Calories {sortField === 'calories' && (sortOrder === 'asc' ? '▲' : '▼')}
+            </th>
+            <th onClick={() => toggleSort('category')} style={{ cursor: 'pointer' }}>
+              Category {sortField === 'category' && (sortOrder === 'asc' ? '▲' : '▼')}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {filteredItems.map((item) => (
-            <tr key={item.id}>
+          {filteredFoods.map(item => (
+            <tr key={item.id} style={{ backgroundColor: '#f9f9f9' }}>
+              <td>{item.id}</td>
               <td>{item.name}</td>
               <td>{item.calories}</td>
               <td>{item.category}</td>
-              <td>
-                {/* You can expand this with inline edit form */}
-                <button onClick={() => handleDelete(item.id)}>Delete</button>
-              </td>
             </tr>
           ))}
-          {filteredItems.length === 0 && (
-            <tr>
-              <td colSpan="4">No items found.</td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
-  );
+  )
 }
 
 export default App;

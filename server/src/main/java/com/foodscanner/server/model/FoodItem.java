@@ -9,9 +9,17 @@ public class FoodItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+
+
+    @NotBlank(message = "Category is required")
     private String category;
+
+    @NotBlank(message = "Name is required")
+    private String name;
+
+    @Min(value = 0, message = "Calories must be positive")
     private int calories;
+
 
     // ✅ Getters and Setters required
     public Long getId() { return id; }
