@@ -1,0 +1,45 @@
+.App {
+  font-family: Arial, sans-serif;
+  padding: 30px;
+  max-width: 900px;
+  margin: auto;
+}
+input {
+  margin: 5px;
+  padding: 8px;
+}
+
+.search-box {
+  margin-top: 20px;
+  padding: 8px;
+  width: 100%;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 8px 16px;
+  margin-left: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th,
+td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+th {
+  user-select: none;
+}
