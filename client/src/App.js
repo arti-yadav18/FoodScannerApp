@@ -1,128 +1,135 @@
-import React, { useEffect, useState } from 'react';
-import './App.css';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import BarcodeScanner from './components/BarcodeScanner';
+import './App.css'; // Optional CSS file for styles
 
 function App() {
-  const [foods, setFoods] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
-
+  const [foodItems, setFoodItems] = useState([]);
+  const [category, setCategory] = useState('');
   const [name, setName] = useState('');
   const [calories, setCalories] = useState('');
-  const [category, setCategory] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetch('/api/scan')
-      .then(res => res.json())
-      .then(data => setFoods(data));
-  }, []);
-
-  const handleSubmit = e => {
-    e.preventDefault();
-    const newItem = { name, calories, category };
-    fetch('/api/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newItem),
-    })
-      .then(res => res.json())
-      .then(added => {
-        setFoods([...foods, added]);
-        setName('');
-        setCalories('');
-        setCategory('');
-      });
-  };
-
-  const filteredFoods = foods
-    .filter(item =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      if (!sortField) return 0;
-      const aVal = a[sortField];
-      const bVal = b[sortField];
-      if (typeof aVal === 'string') {
-        return sortOrder === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      }
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-
-  const toggleSort = field => {
-    if (sortField === field) {
-      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
+  const fetchItems = async () => {
+    try {
+      const res = await axios.get('http://localhost:8080/api/fooditems');
+      setFoodItems(res.data);
+    } catch (err) {
+      console.error('Error fetching food items:', err.message);
     }
   };
 
-  return (
-    <div className="App">
-      <h1 style={{ color: '#2c3e50' }}>Nutri Scan</h1>
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Food Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
-        />
-        <input
-          placeholder="Calories"
-          value={calories}
-          onChange={e => setCalories(e.target.value)}
-          required
-        />
-        <input
-          placeholder="Category"
-          value={category}
-          onChange={e => setCategory(e.target.value)}
-        />
-        <button type="submit" style={{ backgroundColor: '#27ae60', color: '#fff' }}>
-          Add Food
-        </button>
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    if (!category || !name || !calories || !barcode) {
+      alert('Please fill in all fields');
+      return;
+    }
+    try {
+      const newItem = {
+        category,
+        name,
+        calories: parseInt(calories),
+        barcode,
+        imageUrl,
+      };
+      await axios.post('http://localhost:8080/api/fooditems', newItem);
+      fetchItems();
+      setCategory('');
+      setName('');
+      setCalories('');
+      setBarcode('');
+      setImageUrl('');
+    } catch (err) {
+      console.error('Error adding item:', err.message);
+    }
+  };
+
+  const handleBarcodeDetected = useCallback(async (scannedCode) => {
+    try {
+      const res = await axios.get(`http://localhost:8080/api/fooditems/barcode/${scannedCode}`);
+      if (res.data) {
+        alert(`Item found:\n${res.data.name} - ${res.data.category}`);
+      } else {
+        alert('No item found for this barcode.');
+      }
+    } catch (err) {
+      console.error('Barcode lookup error:', err.message);
+      alert('Item not found in database.');
+    }
+  }, []);
+
+  const filteredItems = foodItems.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="App" style={{ fontFamily: 'Arial', padding: '20px' }}>
+      <h1 style={{ color: '#2c3e50' }}>Food Scanner App</h1>
+
+      <form onSubmit={handleAddItem} style={{ marginBottom: '20px' }}>
+        <input placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} />
+        <input placeholder="Food Name" value={name} onChange={e => setName(e.target.value)} />
+        <input placeholder="Calories" type="number" value={calories} onChange={e => setCalories(e.target.value)} />
+        <input placeholder="Barcode" value={barcode} onChange={e => setBarcode(e.target.value)} />
+        <input placeholder="Image URL (optional)" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+        <button type="submit" style={{ marginLeft: '10px' }}>Add Item</button>
       </form>
 
       <input
         type="text"
-        placeholder="Search by name or category..."
+        placeholder="Search food items"
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
-        className="search-box"
+        style={{ marginBottom: '20px', padding: '5px' }}
       />
 
-      <table>
-        <thead>
-          <tr style={{ backgroundColor: '#34495e', color: '#ecf0f1' }}>
-            <th>ID</th>
-            <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>
-              Name {sortField === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
-            <th onClick={() => toggleSort('calories')} style={{ cursor: 'pointer' }}>
-              Calories {sortField === 'calories' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
-            <th onClick={() => toggleSort('category')} style={{ cursor: 'pointer' }}>
-              Category {sortField === 'category' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
+      <table border="1" cellPadding="10" style={{ width: '100%', marginBottom: '40px' }}>
+        <thead style={{ backgroundColor: '#f2f2f2' }}>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Calories</th>
+            <th>Barcode</th>
+            <th>Image</th>
           </tr>
         </thead>
         <tbody>
-          {filteredFoods.map(item => (
-            <tr key={item.id} style={{ backgroundColor: '#f9f9f9' }}>
-              <td>{item.id}</td>
+          {filteredItems.map((item, idx) => (
+            <tr key={idx}>
               <td>{item.name}</td>
-              <td>{item.calories}</td>
               <td>{item.category}</td>
+              <td>{item.calories}</td>
+              <td>{item.barcode}</td>
+              <td>
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
+                          onError={(e) => {
+                            e.target.src = 'https://via.placeholder.com/80?text=N/A';
+                          }}
+                        />
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <h2>Barcode Scanner</h2>
+      <BarcodeScanner onScan={handleBarcodeDetected} />
     </div>
-  )
+  );
 }
 
 export default App;

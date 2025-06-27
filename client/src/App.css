@@ -1,45 +1,68 @@
-.App {
-  font-family: Arial, sans-serif;
-  padding: 30px;
-  max-width: 900px;
-  margin: auto;
+.app-container {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f9fbfd;
+  color: #333;
 }
-input {
+
+h1 {
+  text-align: center;
+  color: #2e8b57;
+}
+
+form input {
   margin: 5px;
   padding: 8px;
+  width: 200px;
 }
 
-.search-box {
-  margin-top: 20px;
-  padding: 8px;
-  width: 100%;
-  border: 1px solid #ccc;
-}
-
-button {
+form button {
   padding: 8px 16px;
-  margin-left: 5px;
+  background-color: #2e8b57;
+  color: white;
   border: none;
   cursor: pointer;
+}
+
+.scanner-section, .form-section, .search-section, .table-section {
+  margin-top: 30px;
+}
+
+.scanned-display {
+  background-color: #d4edda;
+  padding: 20px;
+  border-left: 5px solid #28a745;
+  margin-top: 20px;
+}
+
+.scanned-display img {
+  width: 150px;
+  height: auto;
+  border-radius: 8px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
-th,
-td {
-  padding: 12px;
-  border: 1px solid #ddd;
+th, td {
+  padding: 10px;
+  border: 1px solid #ccc;
   text-align: center;
 }
 
-tr:nth-child(even) {
-  background-color: #f2f2f2;
+.thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 5px;
+}
+img {
+  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 
-th {
-  user-select: none;
+.highlight {
+  background-color: #ffffcc;
 }
