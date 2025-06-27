@@ -1,6 +1,8 @@
 package com.foodscanner.server.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 public class FoodItem {
@@ -9,28 +11,56 @@ public class FoodItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
+    @NotBlank(message = "Name is required")
+    private String name;
 
     @NotBlank(message = "Category is required")
     private String category;
 
-    @NotBlank(message = "Name is required")
-    private String name;
-
     @Min(value = 0, message = "Calories must be positive")
     private int calories;
 
+    private String barcode;
 
-    // ✅ Getters and Setters required
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // Getters and setters
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public int getCalories() { return calories; }
-    public void setCalories(int calories) { this.calories = calories; }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public int getCalories() {
+        return calories;
+    }
+
+    public void setCalories(int calories) {
+        this.calories = calories;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
 }
