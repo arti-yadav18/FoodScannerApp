@@ -108,19 +108,12 @@ function App() {
               <td>{item.calories}</td>
               <td>{item.barcode}</td>
               <td>
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }}
-                          onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/80?text=N/A';
-                          }}
-                        />
-                      ) : (
-                        'N/A'
-                      )}
-                    </td>
+                {item.imageUrl ? (
+                  <img src={item.imageUrl} alt={item.name} width="50" height="50" />
+                ) : (
+                  'N/A'
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
