@@ -1,23 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import BarcodeScanner from './components/BarcodeScanner';
-import './App.css'; // Optional CSS file for styles
 
 function App() {
+  const [currentTab, setCurrentTab] = useState('scan');
   const [foodItems, setFoodItems] = useState([]);
-  const [category, setCategory] = useState('');
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
   const [calories, setCalories] = useState('');
   const [barcode, setBarcode] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [matchedItem, setMatchedItem] = useState(null);
 
   const fetchItems = async () => {
     try {
-      const res = await axios.get('http://localhost:8080/api/fooditems');
-      setFoodItems(res.data);
+      const response = await axios.get('http://localhost:8080/api/fooditems');
+      setFoodItems(response.data);
     } catch (err) {
-      console.error('Error fetching food items:', err.message);
+      console.error('Error fetching items:', err);
     }
   };
 
@@ -25,102 +26,177 @@ function App() {
     fetchItems();
   }, []);
 
-  const handleAddItem = async (e) => {
-    e.preventDefault();
-    if (!category || !name || !calories || !barcode) {
-      alert('Please fill in all fields');
-      return;
-    }
-    try {
-      const newItem = {
-        category,
-        name,
-        calories: parseInt(calories),
-        barcode,
-        imageUrl,
-      };
-      await axios.post('http://localhost:8080/api/fooditems', newItem);
-      fetchItems();
-      setCategory('');
-      setName('');
-      setCalories('');
-      setBarcode('');
-      setImageUrl('');
-    } catch (err) {
-      console.error('Error adding item:', err.message);
-    }
-  };
+ const handleSubmit = async (e) => {
+   e.preventDefault(); // Prevent page reload
+   console.log("Submitting form");
 
-  const handleBarcodeDetected = useCallback(async (scannedCode) => {
-    try {
-      const res = await axios.get(`http://localhost:8080/api/fooditems/barcode/${scannedCode}`);
-      if (res.data) {
-        alert(`Item found:\n${res.data.name} - ${res.data.category}`);
-      } else {
-        alert('No item found for this barcode.');
-      }
-    } catch (err) {
-      console.error('Barcode lookup error:', err.message);
-      alert('Item not found in database.');
+   try {
+     const response = await axios.post('http://localhost:8080/api/fooditems', {
+       name,
+       category,
+       calories: parseInt(calories),
+       barcode,
+       imageUrl
+     });
+
+     console.log("Item added:", response.data);
+     setName('');
+     setCategory('');
+     setCalories('');
+     setBarcode('');
+     setImageUrl('');
+     fetchItems(); // Refresh item list
+
+   } catch (error) {
+     console.error("Error adding item:", error.response?.data || error.message);
+   }
+ };
+
+  const handleScan = useCallback((scannedCode) => {
+    const found = foodItems.find(item => item.barcode === scannedCode);
+    if (found) {
+      setMatchedItem(found);
+    } else {
+      setMatchedItem({ notFound: true, barcode: scannedCode });
     }
-  }, []);
+  }, [foodItems]);
+
+  useEffect(() => {
+    if (matchedItem) {
+      const timer = setTimeout(() => setMatchedItem(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [matchedItem]);
 
   const filteredItems = foodItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const inputStyle = {
+    padding: '0.8rem',
+    marginBottom: '1rem',
+    width: '100%',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
+    fontSize: '1rem',
+    boxSizing: 'border-box'
+  };
+
+  const buttonStyle = {
+    padding: '0.8rem',
+    width: '100%',
+    backgroundColor: '#2c3e50',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    marginBottom: '1rem'
+  };
+
   return (
-    <div className="App" style={{ fontFamily: 'Arial', padding: '20px' }}>
-      <h1 style={{ color: '#2c3e50' }}>Food Scanner App</h1>
+    <div style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
+      <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>📱 Food Scanner App</h2>
 
-      <form onSubmit={handleAddItem} style={{ marginBottom: '20px' }}>
-        <input placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} />
-        <input placeholder="Food Name" value={name} onChange={e => setName(e.target.value)} />
-        <input placeholder="Calories" type="number" value={calories} onChange={e => setCalories(e.target.value)} />
-        <input placeholder="Barcode" value={barcode} onChange={e => setBarcode(e.target.value)} />
-        <input placeholder="Image URL (optional)" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
-        <button type="submit" style={{ marginLeft: '10px' }}>Add Item</button>
-      </form>
+      {/* Navigation */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-around',
+        margin: '1rem 0'
+      }}>
+        <button onClick={() => setCurrentTab('scan')} style={{ flex: 1, padding: '0.5rem' }}>📷 Scan</button>
+        <button onClick={() => setCurrentTab('add')} style={{ flex: 1, padding: '0.5rem' }}>➕ Add</button>
+        <button onClick={() => setCurrentTab('search')} style={{ flex: 1, padding: '0.5rem' }}>🔍 Search</button>
+      </div>
 
-      <input
-        type="text"
-        placeholder="Search food items"
-        value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-        style={{ marginBottom: '20px', padding: '5px' }}
-      />
+      {/* Scan Tab */}
+      {currentTab === 'scan' && (
 
-      <table border="1" cellPadding="10" style={{ width: '100%', marginBottom: '40px' }}>
-        <thead style={{ backgroundColor: '#f2f2f2' }}>
-          <tr>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Calories</th>
-            <th>Barcode</th>
-            <th>Image</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredItems.map((item, idx) => (
-            <tr key={idx}>
-              <td>{item.name}</td>
-              <td>{item.category}</td>
-              <td>{item.calories}</td>
-              <td>{item.barcode}</td>
-              <td>
-                {item.imageUrl ? (
-                  <img src={item.imageUrl} alt={item.name} width="50" height="50" />
-                ) : (
-                  'N/A'
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div>
+          <BarcodeScanner onScan={handleScan} />
 
-      <h2>Barcode Scanner</h2>
-      <BarcodeScanner onScan={handleBarcodeDetected} />
+
+          {matchedItem && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              borderRadius: '8px',
+              backgroundColor: matchedItem.notFound ? '#ffe0e0' : '#e0ffe0',
+              boxShadow: '0 0 5px rgba(0,0,0,0.1)',
+            }}>
+              {matchedItem.notFound ? (
+                <p><strong>Item not found for barcode:</strong><br />{matchedItem.barcode}</p>
+              ) : (
+                <>
+                  <h3 style={{ margin: '0 0 0.5rem 0' }}>{matchedItem.name}</h3>
+                  <p><strong>Category:</strong> {matchedItem.category}</p>
+                  <p><strong>Calories:</strong> {matchedItem.calories}</p>
+                  {matchedItem.imageUrl && (
+                    <img
+                      src={matchedItem.imageUrl}
+                      alt={matchedItem.name}
+                      style={{ width: '100%', maxHeight: '150px', objectFit: 'cover', borderRadius: '6px' }}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Add Tab */}
+      {currentTab === 'add' && (
+        <form onSubmit={handleSubmit}>
+          <input style={inputStyle} type="text" placeholder="Food Name" value={name} onChange={e => setName(e.target.value)} required />
+          <input style={inputStyle} type="text" placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} required />
+          <input style={inputStyle} type="number" placeholder="Calories" value={calories} onChange={e => setCalories(e.target.value)} required />
+          <input style={inputStyle} type="text" placeholder="Barcode" value={barcode} onChange={e => setBarcode(e.target.value)} required />
+          <input style={inputStyle} type="text" placeholder="Image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+          <button style={buttonStyle} type="submit">Add Food Item</button>
+        </form>
+      )}
+
+      {/* Search Tab */}
+      {currentTab === 'search' && (
+        <div>
+          <input
+            style={inputStyle}
+            type="text"
+            placeholder="Search food"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Calories</th>
+                  <th>Barcode</th>
+                  <th>Image</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item, i) => (
+                  <tr key={i} style={{ textAlign: 'center' }}>
+                    <td>{item.name}</td>
+                    <td>{item.category}</td>
+                    <td>{item.calories}</td>
+                    <td>{item.barcode}</td>
+                    <td>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} style={{ width: '50px', height: '40px', objectFit: 'cover' }} />
+                      ) : 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
